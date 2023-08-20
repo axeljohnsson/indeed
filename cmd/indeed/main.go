@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -23,5 +24,5 @@ func main() {
 func mainErr() error {
 	flag.Parse()
 	handler := indeed.NewHandler(indeed.NewRDAPClient(rdapBaseURL))
-	return http.ListenAndServe(*addr, handler)
+	return http.ListenAndServe(*addr, indeed.LogHandler(handler, slog.Default()))
 }

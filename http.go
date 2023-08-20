@@ -3,10 +3,12 @@ package indeed
 import (
 	"encoding/xml"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 )
 
 const paramQ = "q"
@@ -97,4 +99,15 @@ func (h *Handler) convert(names []string, domains []RDAPDomain) (*RSSFeed, error
 		Description: fmt.Sprintf("Domain events for: %s.", strings.Join(names, ", ")),
 		Items:       items,
 	}, nil
+}
+
+func LogHandler(h http.Handler, logger *slog.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		h.ServeHTTP(w, r)
+		duration := time.Now().Sub(start)
+
+		req := slog.Group("req", slog.String("method", r.Method), slog.String("url", r.URL.String()))
+		logger.InfoContext(r.Context(), "processed", req, slog.Duration("duration", duration))
+	})
 }
