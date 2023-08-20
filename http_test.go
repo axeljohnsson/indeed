@@ -36,7 +36,7 @@ func TestHTTPBody(t *testing.T) {
 		Version:     "2.0",
 		Title:       "Domain Events",
 		Link:        "/?q=example.com",
-		Description: "Domain events for: example.com",
+		Description: "Domain events for: example.com.",
 		Items: []RSSItem{
 			{
 				Link:        link,

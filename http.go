@@ -88,13 +88,13 @@ func (h *Handler) convert(names []string, domains []RDAPDomain) (*RSSFeed, error
 
 	var link url.URL
 	link.Path = "/"
-	link.RawQuery = url.Values{"q": names}.Encode()
+	link.RawQuery = url.Values{paramQ: names}.Encode()
 
 	return &RSSFeed{
 		Version:     "2.0",
 		Title:       "Domain Events",
 		Link:        link.String(),
-		Description: fmt.Sprintf("Domain events for: %s", strings.Join(names, ", ")),
+		Description: fmt.Sprintf("Domain events for: %s.", strings.Join(names, ", ")),
 		Items:       items,
 	}, nil
 }

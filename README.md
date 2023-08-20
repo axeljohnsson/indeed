@@ -10,7 +10,7 @@ It works all right, despite its name.
 To run the HTTP server with Docker:
 
 ```shell
-docker run --rm --publish 8080:8080 ghcr.io/axeljohnsson/indeed:latest
+docker run --rm --publish 8080:8080 ghcr.io/axeljohnsson/indeed:main
 ```
 
 Next, an example of how to query a domain with `curl`.
