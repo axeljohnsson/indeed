@@ -29,3 +29,14 @@ type RSSTime struct {
 func (t RSSTime) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	return e.EncodeElement(t.Format(time.RFC822), start)
 }
+
+func (t *RSSTime) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var text string
+	if err := d.DecodeElement(&text, &start); err != nil {
+		return err
+	}
+
+	var err error
+	t.Time, err = time.Parse(time.RFC822, text)
+	return err
+}
