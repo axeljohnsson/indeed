@@ -23,6 +23,10 @@ func main() {
 
 func mainErr() error {
 	flag.Parse()
-	handler := indeed.NewHandler(indeed.NewRDAPClient(rdapBaseURL))
-	return http.ListenAndServe(*addr, indeed.LogHandler(handler, slog.Default()))
+
+	client := indeed.NewRDAPClient(rdapBaseURL)
+	feedHandler := indeed.LogHandler(indeed.NewFeedHandler(client), slog.Default())
+	http.Handle("/feed", feedHandler)
+
+	return http.ListenAndServe(*addr, nil)
 }

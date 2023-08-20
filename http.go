@@ -13,15 +13,15 @@ import (
 
 const paramQ = "q"
 
-type Handler struct {
+type FeedHandler struct {
 	rdap *RDAPClient
 }
 
-func NewHandler(client *RDAPClient) *Handler {
-	return &Handler{client}
+func NewFeedHandler(client *RDAPClient) *FeedHandler {
+	return &FeedHandler{client}
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
@@ -53,7 +53,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) names(params url.Values) ([]string, error) {
+func (h *FeedHandler) names(params url.Values) ([]string, error) {
 	if !params.Has(paramQ) {
 		return nil, fmt.Errorf("missing query parameter %q", paramQ)
 	}
@@ -68,7 +68,7 @@ func (h *Handler) names(params url.Values) ([]string, error) {
 	return names, nil
 }
 
-func (h *Handler) convert(names []string, domains []RDAPDomain) (*RSSFeed, error) {
+func (h *FeedHandler) convert(names []string, domains []RDAPDomain) (*RSSFeed, error) {
 	items := make([]RSSItem, 0)
 	for _, domain := range domains {
 		for _, event := range domain.Events {
@@ -89,7 +89,7 @@ func (h *Handler) convert(names []string, domains []RDAPDomain) (*RSSFeed, error
 	})
 
 	var link url.URL
-	link.Path = "/"
+	link.Path = "/feed"
 	link.RawQuery = url.Values{paramQ: names}.Encode()
 
 	return &RSSFeed{

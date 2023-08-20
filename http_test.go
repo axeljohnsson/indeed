@@ -35,7 +35,7 @@ func TestHTTPBody(t *testing.T) {
 		XMLName:     xml.Name{Local: "rss"},
 		Version:     "2.0",
 		Title:       "Domain Events",
-		Link:        "/?q=example.com",
+		Link:        "/feed?q=example.com",
 		Description: "Domain events for: example.com.",
 		Items: []RSSItem{
 			{
@@ -117,7 +117,7 @@ func testLookup(r *http.Request) (*http.Response, string) {
 	server := httptest.NewServer(http.HandlerFunc(rdapHandler))
 	defer server.Close()
 
-	h := NewHandler(NewRDAPClient(server.URL))
+	h := NewFeedHandler(NewRDAPClient(server.URL))
 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
