@@ -19,6 +19,7 @@ type RSSItem struct {
 	Link        string  `xml:"link,omitempty"`
 	Description string  `xml:"description,omitempty"`
 	Author      string  `xml:"author,omitempty"`
+	GUID        string  `xml:"guid,omitempty"`
 	PubDate     RSSTime `xml:"pubDate,omitempty"`
 }
 

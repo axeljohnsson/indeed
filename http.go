@@ -1,6 +1,7 @@
 package indeed
 
 import (
+	"crypto/sha256"
 	"encoding/xml"
 	"fmt"
 	"log/slog"
@@ -80,6 +81,7 @@ func (h *FeedHandler) convert(names []string, domains []RDAPDomain) (*RSSFeed, e
 				Link:        link,
 				Description: fmt.Sprintf("%s: %s", strings.ToLower(domain.Name), event.Action),
 				Author:      event.Actor,
+				GUID:        h.itemGUID(&domain, &event),
 				PubDate:     RSSTime{event.Date},
 			})
 		}
@@ -99,6 +101,14 @@ func (h *FeedHandler) convert(names []string, domains []RDAPDomain) (*RSSFeed, e
 		Description: fmt.Sprintf("Domain events for: %s.", strings.Join(names, ", ")),
 		Items:       items,
 	}, nil
+}
+
+func (h *FeedHandler) itemGUID(domain *RDAPDomain, event *RDAPEvent) string {
+	w := sha256.New()
+	w.Write([]byte(strings.ToLower(domain.Name)))
+	w.Write([]byte(event.Action))
+	w.Write([]byte(event.Date.Format(time.RFC3339)))
+	return fmt.Sprintf("%x", w.Sum(nil))
 }
 
 func LogHandler(h http.Handler, logger *slog.Logger) http.Handler {
