@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-const paramQ = "q"
+const (
+	paramQ       = "q"
+	updateAction = "last update of RDAP database"
+)
 
 type FeedHandler struct {
 	rdap *RDAPClient
@@ -73,6 +76,9 @@ func (h *FeedHandler) convert(names []string, domains []RDAPDomain) (*RSSFeed, e
 	items := make([]RSSItem, 0)
 	for _, domain := range domains {
 		for _, event := range domain.Events {
+			if event.Action == updateAction {
+				continue
+			}
 			link, err := url.JoinPath(h.rdap.BaseURL, "domain", domain.Name)
 			if err != nil {
 				return nil, err

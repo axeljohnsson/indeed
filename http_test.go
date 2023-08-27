@@ -46,12 +46,6 @@ func TestHTTPBody(t *testing.T) {
 			},
 			{
 				Link:        link,
-				Description: "example.com: last update of RDAP database",
-				GUID:        "3e76fd4729424255d67fca30ea5064c51bd5dc37f518f9083ac4d267e822c92e",
-				PubDate:     RSSTime{time.Date(2023, 8, 19, 8, 16, 0, 0, time.UTC)},
-			},
-			{
-				Link:        link,
 				Description: "example.com: last changed",
 				GUID:        "264aaecf302ed10f175731ded269a76e2ac202212ac70cf6e73977e6ba033f5b",
 				PubDate:     RSSTime{time.Date(2023, 8, 14, 7, 1, 0, 0, time.UTC)},
