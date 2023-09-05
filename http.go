@@ -3,19 +3,25 @@ package indeed
 import (
 	"crypto/sha256"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const (
 	paramQ       = "q"
+	paramMSM     = "msm"
+	paramOp      = "op"
 	updateAction = "last update of RDAP database"
 )
+
+var errBadParam = errors.New("bad value")
 
 type FeedHandler struct {
 	rdap *RDAPClient
@@ -37,9 +43,29 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	msm, err := h.msm(r.URL.Query())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	domains, err := h.rdap.LookupDomains(r.Context(), names)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var match int
+	for _, name := range names {
+		for _, domain := range domains {
+			if strings.ToLower(domain.Name) == name {
+				match++
+				break
+			}
+		}
+	}
+	if match < msm {
+		http.Error(w, "domain(s) not found", http.StatusNotFound)
 		return
 	}
 
@@ -70,6 +96,36 @@ func (h *FeedHandler) names(params url.Values) ([]string, error) {
 	sort.Strings(names)
 
 	return names, nil
+}
+
+func (h *FeedHandler) msm(params url.Values) (int, error) {
+	if params.Has(paramMSM) {
+		value := params.Get(paramMSM)
+		msm, err := strconv.Atoi(value)
+		if err != nil {
+			return 0, &paramError{
+				name: paramMSM,
+				err:  errBadParam,
+			}
+		}
+		return msm, nil
+	}
+
+	if params.Has(paramOp) {
+		switch value := params.Get(paramOp); value {
+		case "and":
+			return len(params[paramQ]), nil
+		case "or":
+			return 1, nil
+		default:
+			return 0, &paramError{
+				name: paramOp,
+				err:  errBadParam,
+			}
+		}
+	}
+
+	return len(params[paramQ]), nil
 }
 
 func (h *FeedHandler) convert(names []string, domains []RDAPDomain) (*RSSFeed, error) {
@@ -126,4 +182,17 @@ func LogHandler(h http.Handler, logger *slog.Logger) http.Handler {
 		req := slog.Group("req", slog.String("method", r.Method), slog.String("url", r.URL.String()))
 		logger.InfoContext(r.Context(), "processed", req, slog.Duration("duration", duration))
 	})
+}
+
+type paramError struct {
+	name string
+	err  error
+}
+
+func (e *paramError) Error() string {
+	return fmt.Sprintf("parameter %q: %v", e.name, e.err)
+}
+
+func (e *paramError) Unwrap() error {
+	return e.err
 }

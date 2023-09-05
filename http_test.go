@@ -2,6 +2,7 @@ package indeed
 
 import (
 	"encoding/xml"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -68,44 +69,124 @@ func TestHTTPStatusCode(t *testing.T) {
 	tests := []struct {
 		name   string
 		method string
-		q      []string
+		params url.Values
 		want   int
 	}{
 		{
 			"ok",
 			http.MethodGet,
-			[]string{"example.com"},
+			url.Values{
+				paramQ: []string{"example.com"},
+			},
 			http.StatusOK,
 		},
 		{
 			"invalid method",
 			http.MethodPost,
-			[]string{"example.com"},
+			url.Values{
+				paramQ: []string{"example.com"},
+			},
 			http.StatusMethodNotAllowed,
 		},
 		{
 			"missing query parameter",
 			http.MethodGet,
-			[]string{},
+			url.Values{},
 			http.StatusBadRequest,
+		},
+		{
+			"not found",
+			http.MethodGet,
+			url.Values{
+				paramQ: []string{"404.com"},
+			},
+			http.StatusNotFound,
 		},
 	}
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			v := url.Values{}
-			for _, name := range tc.q {
-				v.Add(paramQ, name)
-			}
-
 			req := httptest.NewRequest(tc.method, "/", nil)
-			req.URL.RawQuery = v.Encode()
+			req.URL.RawQuery = tc.params.Encode()
 
 			res, _ := testLookup(req)
 			defer res.Body.Close()
 
 			if res.StatusCode != tc.want {
 				t.Fatalf("got: %d; want: %d", res.StatusCode, tc.want)
+			}
+		})
+	}
+}
+
+func TestMSM(t *testing.T) {
+	tests := []struct {
+		name   string
+		params url.Values
+		want   int
+		err    error
+	}{
+		{
+			"default",
+			url.Values{
+				paramQ: []string{"example.com"},
+			},
+			1,
+			nil,
+		},
+		{
+			"msm",
+			url.Values{
+				paramMSM: []string{"0"},
+			},
+			0,
+			nil,
+		},
+		{
+			"and operator",
+			url.Values{
+				paramQ:  []string{"example.com", "example.net"},
+				paramOp: []string{"and"},
+			},
+			2,
+			nil,
+		},
+		{
+			"or operator",
+			url.Values{
+				paramQ:  []string{"example.com", "example.net"},
+				paramOp: []string{"or"},
+			},
+			1,
+			nil,
+		},
+		{
+			"invalid msm",
+			url.Values{
+				paramMSM: []string{"bad"},
+			},
+			0,
+			errBadParam,
+		},
+		{
+			"invalid operator",
+			url.Values{
+				paramOp: []string{"bad"},
+			},
+			0,
+			errBadParam,
+		},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			h := FeedHandler{}
+			got, err := h.msm(tc.params)
+			if got != tc.want {
+				t.Fatalf("got: %d; want: %d", got, tc.want)
+			}
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("got: %v; want: %v", err, tc.err)
 			}
 		})
 	}
