@@ -110,8 +110,9 @@ func (h *FeedHandler) msm(params url.Values) (int, error) {
 		msm, err := strconv.Atoi(value)
 		if err != nil {
 			return 0, &paramError{
-				name: paramMSM,
-				err:  errBadParam,
+				name:  paramMSM,
+				value: value,
+				err:   errBadParam,
 			}
 		}
 		return msm, nil
@@ -125,8 +126,9 @@ func (h *FeedHandler) msm(params url.Values) (int, error) {
 			return 1, nil
 		default:
 			return 0, &paramError{
-				name: paramOp,
-				err:  errBadParam,
+				name:  paramOp,
+				value: value,
+				err:   errBadParam,
 			}
 		}
 	}
@@ -191,12 +193,17 @@ func LogHandler(h http.Handler, logger *slog.Logger) http.Handler {
 }
 
 type paramError struct {
-	name string
-	err  error
+	name  string
+	value string
+	err   error
 }
 
 func (e *paramError) Error() string {
-	return fmt.Sprintf("parameter %q: %v", e.name, e.err)
+	msg := fmt.Sprintf("parameter %q: %v", e.name, e.err)
+	if e.value != "" {
+		msg = fmt.Sprintf("%s %q", msg, e.value)
+	}
+	return msg
 }
 
 func (e *paramError) Unwrap() error {
