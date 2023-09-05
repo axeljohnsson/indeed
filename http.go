@@ -21,7 +21,10 @@ const (
 	updateAction = "last update of RDAP database"
 )
 
-var errBadParam = errors.New("bad value")
+var (
+	errBadParam = errors.New("bad value")
+	errNoParam  = errors.New("no value")
+)
 
 type FeedHandler struct {
 	rdap *RDAPClient
@@ -85,7 +88,10 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *FeedHandler) names(params url.Values) ([]string, error) {
 	if !params.Has(paramQ) {
-		return nil, fmt.Errorf("missing query parameter %q", paramQ)
+		return nil, &paramError{
+			name: paramQ,
+			err:  errNoParam,
+		}
 	}
 
 	names := params[paramQ]
