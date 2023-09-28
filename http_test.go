@@ -19,7 +19,7 @@ func TestHTTPBody(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.URL.RawQuery = v.Encode()
 
-	res, serverURL := testLookup(req)
+	res := testLookup(req)
 	defer res.Body.Close()
 
 	var got RSSFeed
@@ -27,7 +27,7 @@ func TestHTTPBody(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	link, err := urlpkg.JoinPath(serverURL, "domain", strings.ToUpper(v.Get(paramQ)))
+	link, err := urlpkg.JoinPath(RDAPBaseURL, "domain", strings.ToUpper(v.Get(paramQ)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestHTTPStatusCode(t *testing.T) {
 			req := httptest.NewRequest(tc.method, "/", nil)
 			req.URL.RawQuery = tc.params.Encode()
 
-			res, _ := testLookup(req)
+			res := testLookup(req)
 			defer res.Body.Close()
 
 			if res.StatusCode != tc.want {
@@ -192,14 +192,14 @@ func TestMSM(t *testing.T) {
 	}
 }
 
-func testLookup(r *http.Request) (*http.Response, string) {
+func testLookup(r *http.Request) *http.Response {
 	server := httptest.NewServer(http.HandlerFunc(rdapHandler))
 	defer server.Close()
 
-	h := NewFeedHandler(NewRDAPClient(server.URL))
+	h := &FeedHandler{NewRDAPClient(server.URL)}
 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 
-	return w.Result(), server.URL
+	return w.Result()
 }

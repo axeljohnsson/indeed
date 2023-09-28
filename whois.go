@@ -5,10 +5,13 @@ import (
 	"errors"
 	"io"
 	"net/textproto"
+	urlpkg "net/url"
 	"regexp"
 	"strings"
 	"time"
 )
+
+const whoisBaseURL = "https://www.whois.com/"
 
 var (
 	errNoServer = errors.New("no WHOIS server")
@@ -33,7 +36,7 @@ func NewWHOISClient() *WHOISClient {
 	}
 }
 
-func (c *WHOISClient) LookupDomain(ctx context.Context, name string) (*RDAPDomain, error) {
+func (c *WHOISClient) Resolve(ctx context.Context, name string) (*Domain, error) {
 	addr := c.m(name)
 	if addr == "" {
 		return nil, errNoServer
@@ -56,9 +59,9 @@ func (c *WHOISClient) LookupDomain(ctx context.Context, name string) (*RDAPDomai
 	return c.unmarshal(conn)
 }
 
-func (c *WHOISClient) unmarshal(conn *textproto.Conn) (*RDAPDomain, error) {
-	domain := &RDAPDomain{
-		Events: make([]RDAPEvent, 0),
+func (c *WHOISClient) unmarshal(conn *textproto.Conn) (*Domain, error) {
+	domain := &Domain{
+		Events: make([]Event, 0),
 	}
 
 	for {
@@ -78,6 +81,11 @@ func (c *WHOISClient) unmarshal(conn *textproto.Conn) (*RDAPDomain, error) {
 		switch before {
 		case "Domain Name":
 			domain.Name = after
+			link, err := urlpkg.JoinPath(whoisBaseURL, "whois", after)
+			if err != nil {
+				return nil, err
+			}
+			domain.Link = link
 		case "Creation Date":
 			if err := c.unmarshalEvent(after, domain, "registration"); err != nil {
 				return nil, err
@@ -109,12 +117,12 @@ func (c *WHOISClient) unmarshal(conn *textproto.Conn) (*RDAPDomain, error) {
 	return domain, nil
 }
 
-func (c *WHOISClient) unmarshalEvent(data string, domain *RDAPDomain, action string) error {
+func (c *WHOISClient) unmarshalEvent(data string, domain *Domain, action string) error {
 	t, err := time.Parse(time.RFC3339, data)
 	if err != nil {
 		return err
 	}
-	domain.Events = append(domain.Events, RDAPEvent{
+	domain.Events = append(domain.Events, Event{
 		Action: action,
 		Date:   t,
 	})

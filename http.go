@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	urlpkg "net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,10 +16,9 @@ import (
 )
 
 const (
-	paramQ       = "q"
-	paramMSM     = "msm"
-	paramOp      = "op"
-	updateAction = "last update of RDAP database"
+	paramQ   = "q"
+	paramMSM = "msm"
+	paramOp  = "op"
 )
 
 var (
@@ -26,12 +26,18 @@ var (
 	errNoParam  = errors.New("no value")
 )
 
+var updateActionRE = regexp.MustCompile("last update of (RDAP|WHOIS) database")
+
 type FeedHandler struct {
-	rdap *RDAPClient
+	r Resolver
 }
 
-func NewFeedHandler(client *RDAPClient) *FeedHandler {
-	return &FeedHandler{client}
+func NewFeedHandler(rdap *RDAPClient, whois *WHOISClient) *FeedHandler {
+	r := MultiResolver([]Resolver{
+		rdap,
+		TryResolver(whois, errNoServer),
+	})
+	return &FeedHandler{r}
 }
 
 func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +58,7 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	domains, err := h.rdap.LookupDomains(r.Context(), names)
+	domains, err := ResolveDomains(r.Context(), h.r, names)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -136,19 +142,15 @@ func (h *FeedHandler) msm(params urlpkg.Values) (int, error) {
 	return len(params[paramQ]), nil
 }
 
-func (h *FeedHandler) convert(names []string, domains []RDAPDomain) (*RSSFeed, error) {
+func (h *FeedHandler) convert(names []string, domains []Domain) (*RSSFeed, error) {
 	items := make([]RSSItem, 0)
 	for _, domain := range domains {
 		for _, event := range domain.Events {
-			if event.Action == updateAction {
+			if updateActionRE.MatchString(event.Action) {
 				continue
 			}
-			link, err := urlpkg.JoinPath(h.rdap.BaseURL, "domain", domain.Name)
-			if err != nil {
-				return nil, err
-			}
 			items = append(items, RSSItem{
-				Link:        link,
+				Link:        domain.Link,
 				Description: fmt.Sprintf("%s: %s", strings.ToLower(domain.Name), event.Action),
 				Author:      event.Actor,
 				GUID:        h.itemGUID(&domain, &event),
@@ -173,7 +175,7 @@ func (h *FeedHandler) convert(names []string, domains []RDAPDomain) (*RSSFeed, e
 	}, nil
 }
 
-func (h *FeedHandler) itemGUID(domain *RDAPDomain, event *RDAPEvent) string {
+func (h *FeedHandler) itemGUID(domain *Domain, event *Event) string {
 	w := sha256.New()
 	w.Write([]byte(strings.ToLower(domain.Name)))
 	w.Write([]byte(event.Action))

@@ -4,23 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	urlpkg "net/url"
 	"time"
-
-	"golang.org/x/sync/errgroup"
 )
 
-type RDAPDomain struct {
-	Name   string      `json:"ldhName"`
-	Events []RDAPEvent `json:"events"`
-}
-
-type RDAPEvent struct {
-	Action string    `json:"eventAction"`
-	Actor  string    `json:"eventActor"`
-	Date   time.Time `json:"eventDate"`
-}
+const RDAPBaseURL = "https://rdap.org/"
 
 type RDAPClient struct {
 	BaseURL string
@@ -34,47 +24,7 @@ func NewRDAPClient(baseURL string) *RDAPClient {
 	}
 }
 
-func (c *RDAPClient) LookupDomains(ctx context.Context, names []string) ([]RDAPDomain, error) {
-	g, ctx := errgroup.WithContext(ctx)
-	ch := make(chan *RDAPDomain)
-
-	for _, name := range names {
-		name := name
-		g.Go(func() error {
-			domain, err := c.LookupDomain(ctx, name)
-			if err != nil {
-				return err
-			}
-
-			if domain != nil {
-				select {
-				case ch <- domain:
-				case <-ctx.Done():
-					return nil
-				}
-			}
-
-			return nil
-		})
-	}
-	go func() {
-		g.Wait()
-		close(ch)
-	}()
-
-	domains := make([]RDAPDomain, 0, len(names))
-	for domain := range ch {
-		domains = append(domains, *domain)
-	}
-
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
-	return domains, nil
-}
-
-func (c *RDAPClient) LookupDomain(ctx context.Context, name string) (*RDAPDomain, error) {
+func (c *RDAPClient) Resolve(ctx context.Context, name string) (*Domain, error) {
 	url, err := urlpkg.JoinPath(c.BaseURL, "domain", name)
 	if err != nil {
 		return nil, err
@@ -98,10 +48,40 @@ func (c *RDAPClient) LookupDomain(ctx context.Context, name string) (*RDAPDomain
 		return nil, fmt.Errorf("unexpected response status %q", res.Status)
 	}
 
-	domain := new(RDAPDomain)
-	if err := json.NewDecoder(res.Body).Decode(domain); err != nil {
+	return c.unmarshal(res.Body)
+}
+
+func (c *RDAPClient) unmarshal(r io.Reader) (*Domain, error) {
+	var body struct {
+		Name   string `json:"ldhName"`
+		Events []struct {
+			Action string    `json:"eventAction"`
+			Actor  string    `json:"eventActor"`
+			Date   time.Time `json:"eventDate"`
+		} `json:"events"`
+	}
+	if err := json.NewDecoder(r).Decode(&body); err != nil {
 		return nil, err
 	}
 
-	return domain, nil
+	domain := Domain{
+		Name:   body.Name,
+		Events: make([]Event, len(body.Events)),
+	}
+
+	for i, event := range body.Events {
+		domain.Events[i] = Event{
+			Action: event.Action,
+			Actor:  event.Actor,
+			Date:   event.Date,
+		}
+	}
+
+	link, err := urlpkg.JoinPath(RDAPBaseURL, "domain", domain.Name)
+	if err != nil {
+		return nil, err
+	}
+	domain.Link = link
+
+	return &domain, nil
 }

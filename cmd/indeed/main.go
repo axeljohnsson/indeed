@@ -10,8 +10,6 @@ import (
 	"github.com/axeljohnsson/indeed"
 )
 
-const rdapBaseURL = "https://rdap.org/"
-
 var addr = flag.String("addr", ":8080", "HTTP network address")
 
 func main() {
@@ -24,8 +22,9 @@ func main() {
 func mainErr() error {
 	flag.Parse()
 
-	client := indeed.NewRDAPClient(rdapBaseURL)
-	feedHandler := indeed.LogHandler(indeed.NewFeedHandler(client), slog.Default())
+	rdap := indeed.NewRDAPClient(indeed.RDAPBaseURL)
+	whois := indeed.NewWHOISClient()
+	feedHandler := indeed.LogHandler(indeed.NewFeedHandler(rdap, whois), slog.Default())
 	http.Handle("/feed", feedHandler)
 
 	return http.ListenAndServe(*addr, nil)

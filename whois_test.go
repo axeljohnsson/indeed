@@ -66,14 +66,15 @@ func TestWHOIS(t *testing.T) {
 	tests := []struct {
 		description string
 		name        string
-		want        *RDAPDomain
+		want        *Domain
 	}{
 		{
 			"ok",
 			"example.com",
-			&RDAPDomain{
+			&Domain{
 				Name: "EXAMPLE.COM",
-				Events: []RDAPEvent{
+				Link: "https://www.whois.com/whois/EXAMPLE.COM",
+				Events: []Event{
 					{
 						Action: "last changed",
 						Date:   time.Date(2023, 8, 14, 7, 1, 38, 0, time.UTC),
@@ -117,7 +118,7 @@ func TestWHOIS(t *testing.T) {
 						return addr.String()
 					},
 				}
-				got, err := c.LookupDomain(ctx, tc.name)
+				got, err := c.Resolve(ctx, tc.name)
 				if err != nil {
 					return err
 				}
