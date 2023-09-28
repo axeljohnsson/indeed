@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
+	urlpkg "net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -13,7 +13,7 @@ import (
 )
 
 func TestHTTPBody(t *testing.T) {
-	v := url.Values{}
+	v := urlpkg.Values{}
 	v.Set(paramQ, "example.com")
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -27,7 +27,7 @@ func TestHTTPBody(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	link, err := url.JoinPath(serverURL, "domain", strings.ToUpper(v.Get(paramQ)))
+	link, err := urlpkg.JoinPath(serverURL, "domain", strings.ToUpper(v.Get(paramQ)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,13 +69,13 @@ func TestHTTPStatusCode(t *testing.T) {
 	tests := []struct {
 		name   string
 		method string
-		params url.Values
+		params urlpkg.Values
 		want   int
 	}{
 		{
 			"ok",
 			http.MethodGet,
-			url.Values{
+			urlpkg.Values{
 				paramQ: []string{"example.com"},
 			},
 			http.StatusOK,
@@ -83,7 +83,7 @@ func TestHTTPStatusCode(t *testing.T) {
 		{
 			"invalid method",
 			http.MethodPost,
-			url.Values{
+			urlpkg.Values{
 				paramQ: []string{"example.com"},
 			},
 			http.StatusMethodNotAllowed,
@@ -91,13 +91,13 @@ func TestHTTPStatusCode(t *testing.T) {
 		{
 			"missing query parameter",
 			http.MethodGet,
-			url.Values{},
+			urlpkg.Values{},
 			http.StatusBadRequest,
 		},
 		{
 			"not found",
 			http.MethodGet,
-			url.Values{
+			urlpkg.Values{
 				paramQ: []string{"404.com"},
 			},
 			http.StatusNotFound,
@@ -122,13 +122,13 @@ func TestHTTPStatusCode(t *testing.T) {
 func TestMSM(t *testing.T) {
 	tests := []struct {
 		name   string
-		params url.Values
+		params urlpkg.Values
 		want   int
 		err    error
 	}{
 		{
 			"default",
-			url.Values{
+			urlpkg.Values{
 				paramQ: []string{"example.com"},
 			},
 			1,
@@ -136,7 +136,7 @@ func TestMSM(t *testing.T) {
 		},
 		{
 			"msm",
-			url.Values{
+			urlpkg.Values{
 				paramMSM: []string{"0"},
 			},
 			0,
@@ -144,7 +144,7 @@ func TestMSM(t *testing.T) {
 		},
 		{
 			"and operator",
-			url.Values{
+			urlpkg.Values{
 				paramQ:  []string{"example.com", "example.net"},
 				paramOp: []string{"and"},
 			},
@@ -153,7 +153,7 @@ func TestMSM(t *testing.T) {
 		},
 		{
 			"or operator",
-			url.Values{
+			urlpkg.Values{
 				paramQ:  []string{"example.com", "example.net"},
 				paramOp: []string{"or"},
 			},
@@ -162,7 +162,7 @@ func TestMSM(t *testing.T) {
 		},
 		{
 			"invalid msm",
-			url.Values{
+			urlpkg.Values{
 				paramMSM: []string{"bad"},
 			},
 			0,
@@ -170,7 +170,7 @@ func TestMSM(t *testing.T) {
 		},
 		{
 			"invalid operator",
-			url.Values{
+			urlpkg.Values{
 				paramOp: []string{"bad"},
 			},
 			0,

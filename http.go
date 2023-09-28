@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
+	urlpkg "net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -86,7 +86,7 @@ func (h *FeedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *FeedHandler) names(params url.Values) ([]string, error) {
+func (h *FeedHandler) names(params urlpkg.Values) ([]string, error) {
 	if !params.Has(paramQ) {
 		return nil, &paramError{
 			name: paramQ,
@@ -104,7 +104,7 @@ func (h *FeedHandler) names(params url.Values) ([]string, error) {
 	return names, nil
 }
 
-func (h *FeedHandler) msm(params url.Values) (int, error) {
+func (h *FeedHandler) msm(params urlpkg.Values) (int, error) {
 	if params.Has(paramMSM) {
 		value := params.Get(paramMSM)
 		msm, err := strconv.Atoi(value)
@@ -143,7 +143,7 @@ func (h *FeedHandler) convert(names []string, domains []RDAPDomain) (*RSSFeed, e
 			if event.Action == updateAction {
 				continue
 			}
-			link, err := url.JoinPath(h.rdap.BaseURL, "domain", domain.Name)
+			link, err := urlpkg.JoinPath(h.rdap.BaseURL, "domain", domain.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -160,9 +160,9 @@ func (h *FeedHandler) convert(names []string, domains []RDAPDomain) (*RSSFeed, e
 		return items[i].PubDate.After(items[j].PubDate.Time)
 	})
 
-	var link url.URL
+	var link urlpkg.URL
 	link.Path = "/feed"
-	link.RawQuery = url.Values{paramQ: names}.Encode()
+	link.RawQuery = urlpkg.Values{paramQ: names}.Encode()
 
 	return &RSSFeed{
 		Version:     "2.0",

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
+	urlpkg "net/url"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -75,7 +75,7 @@ func (c *RDAPClient) LookupDomains(ctx context.Context, names []string) ([]RDAPD
 }
 
 func (c *RDAPClient) LookupDomain(ctx context.Context, name string) (*RDAPDomain, error) {
-	url, err := url.JoinPath(c.BaseURL, "domain", name)
+	url, err := urlpkg.JoinPath(c.BaseURL, "domain", name)
 	if err != nil {
 		return nil, err
 	}
